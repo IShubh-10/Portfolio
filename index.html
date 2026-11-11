@@ -1,0 +1,2579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Shubham Kadam — Frontend Developer. Internal tools, marketing automation and personalization tools built with React.js, JavaScript and Node.js.">
+    <title>Shubham Kadam — Frontend Developer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons (pinned: later releases dropped the brand icons used below) -->
+    <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+    <!-- Three.js for the 3D background scene -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        /* ====================================================================
+           A profile card on the left, and one panel on the right whose tabs
+           (About, Resume, Portfolio, Contact) swap the page. White surfaces,
+           slate text and a single navy accent.
+           ================================================================== */
+        :root {
+            --accent: #1f4e9c;
+            --accent-hover: #183e7c;
+            --accent-wash: #eff4ff;
+            --accent-soft: #dbe6fe;
+
+            --bg: #f6f7f9;
+            --panel: #ffffff;
+            --panel-alt: #f9fafb;
+            --text: #0f172a;
+            --text-body: #334155;
+            --text-muted: #64748b;
+            --text-faint: #94a3b8;
+            --border: #e2e8f0;
+            --border-soft: #eef1f5;
+
+            --radius: 20px;
+            --radius-sm: 12px;
+            --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
+            --shadow-hover: 0 16px 32px -16px rgba(15, 23, 42, 0.22);
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-body);
+            background:
+                radial-gradient(ellipse at 15% 0%, #e6edfb 0%, transparent 55%),
+                radial-gradient(ellipse at 90% 100%, #e3eafa 0%, transparent 50%),
+                var(--bg);
+            background-attachment: fixed;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ------------------------------------------------------- 3D scene */
+        #scene3d {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        main, footer { position: relative; z-index: 1; }
+
+        a { color: inherit; text-decoration: none; }
+        ul, ol { list-style: none; }
+        button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+        svg.lucide { width: 18px; height: 18px; stroke-width: 1.8; flex-shrink: 0; }
+
+        main {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 48px 24px 64px;
+        }
+
+        /* Frosted glass so the 3D scene shows softly through the panels */
+        .card {
+            background: rgba(255, 255, 255, 0.82);
+            -webkit-backdrop-filter: blur(18px) saturate(150%);
+            backdrop-filter: blur(18px) saturate(150%);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        /* ------------------------------------------------- 3D tilt cards
+           JS adds .tilt on devices with a fine pointer and sets --rx/--ry
+           from the cursor; children lift off the surface while tilting. */
+        .tilt {
+            position: relative;
+            transform-style: preserve-3d;
+            transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(var(--tz, 0px));
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
+        }
+
+        .sidebar.tilt { position: sticky; }
+
+        .tilt.is-tilting {
+            --tz: 6px;
+            transition: transform 0.12s linear, box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
+            box-shadow: 0 30px 50px -28px rgba(15, 23, 42, 0.35);
+        }
+
+        .tilt > *,
+        .tilt .project-cover,
+        .tilt .project-body { transform-style: preserve-3d; }
+
+        .tilt .icon-box,
+        .tilt h4,
+        .tilt b { transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+        .tilt.is-tilting .icon-box { transform: translateZ(34px); }
+        .tilt.is-tilting .project-body h4,
+        .tilt.is-tilting.service-item h4,
+        .tilt.is-tilting.skill-group h4,
+        .tilt.is-tilting.stat > b,
+        .tilt.is-tilting.contact-card b { transform: translateZ(20px); }
+        .tilt.is-tilting .project-cover .icon-box { transform: translateZ(50px) scale(1.08); }
+
+        /* Light glare following the cursor */
+        .tilt::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(59, 111, 216, 0.12), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s var(--ease);
+        }
+
+        .tilt.is-tilting::after { opacity: 1; }
+
+        /* ------------------------------------------------------------ sidebar */
+        .sidebar {
+            position: sticky;
+            top: 48px;
+            width: 300px;
+            flex-shrink: 0;
+            padding: 32px 26px;
+        }
+
+        .sidebar-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .avatar {
+            width: 112px;
+            height: 112px;
+            display: grid;
+            place-items: center;
+            border-radius: 28px;
+            background: linear-gradient(140deg, var(--accent) 0%, #3b6fd8 100%);
+            color: #ffffff;
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            box-shadow: 0 14px 28px -14px rgba(31, 78, 156, 0.7);
+            position: relative;
+            transform-style: preserve-3d;
+            animation: avatar3d 8s ease-in-out infinite;
+        }
+
+        /* A darker back plate gives the avatar visible thickness as it turns */
+        .avatar::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(140deg, #13306a, #1f4e9c);
+            transform: translateZ(-16px);
+        }
+
+        .avatar span { transform: translateZ(22px); text-shadow: 0 6px 14px rgba(10, 25, 60, 0.45); }
+
+        @keyframes avatar3d {
+            0%, 100% { transform: perspective(500px) rotateY(-18deg) rotateX(8deg); }
+            50%      { transform: perspective(500px) rotateY(18deg) rotateX(-6deg); }
+        }
+
+        .sidebar h1 {
+            margin-top: 18px;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .title-pill {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 5px 14px;
+            border-radius: 999px;
+            background: var(--accent-wash);
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+        }
+
+        .contacts-toggle {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            margin-top: 16px;
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .contacts-toggle svg.lucide { width: 15px; height: 15px; transition: transform 0.2s var(--ease); }
+        .sidebar.open .contacts-toggle svg.lucide { transform: rotate(180deg); }
+
+        .sidebar-more {
+            margin-top: 26px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-soft);
+        }
+
+        .contacts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .icon-box {
+            width: 40px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            border-radius: 11px;
+            background: var(--accent-wash);
+            color: var(--accent);
+        }
+
+        .contact-item small {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: var(--text-faint);
+        }
+
+        .contact-item a,
+        .contact-item span {
+            display: block;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .contact-item a:hover { color: var(--accent); }
+
+        .social-list {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 24px;
+            padding-top: 22px;
+            border-top: 1px solid var(--border-soft);
+        }
+
+        .social-list a {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-muted);
+            transition: all 0.2s var(--ease);
+        }
+
+        .social-list a:hover {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        .cv-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 18px;
+            padding: 11px;
+            border-radius: 12px;
+            background: var(--accent);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s var(--ease);
+        }
+
+        .cv-btn:hover { background: var(--accent-hover); }
+
+        /* -------------------------------------------------------- main panel */
+        .main-content {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .navbar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 0 12px;
+            border-left: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            border-radius: 0 var(--radius) 0 var(--radius);
+            background: var(--panel-alt);
+            z-index: 5;
+        }
+
+        .navbar ul {
+            display: flex;
+            gap: 4px;
+        }
+
+        .navbar button {
+            position: relative;
+            padding: 18px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: color 0.2s var(--ease);
+        }
+
+        .navbar button:hover { color: var(--text); }
+
+        .navbar button.active {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .navbar button.active::after {
+            content: '';
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            bottom: -1px;
+            height: 2px;
+            border-radius: 2px;
+            background: var(--accent);
+        }
+
+        article {
+            display: none;
+            padding: 36px 36px 40px;
+            animation: flip3d 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transform-origin: 50% 0;
+        }
+
+        article.active { display: block; }
+
+        /* Each tab swings in from depth */
+        @keyframes flip3d {
+            from { opacity: 0; transform: perspective(1400px) rotateX(-10deg) rotateY(8deg) translate3d(0, 24px, -120px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        .article-title {
+            position: relative;
+            padding-bottom: 14px;
+            margin-bottom: 26px;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            color: var(--text);
+        }
+
+        .article-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 36px;
+            height: 4px;
+            border-radius: 4px;
+            background: var(--accent);
+        }
+
+        .h3 {
+            margin-bottom: 18px;
+            font-size: 19px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        section + section { margin-top: 36px; }
+
+        /* -------------------------------------------------------------- about */
+        .about-text p + p { margin-top: 14px; }
+        .about-text strong { color: var(--text); font-weight: 600; }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .stat {
+            padding: 18px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--panel-alt);
+        }
+
+        .stat b {
+            display: block;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--accent);
+        }
+
+        .stat span { font-size: 12.5px; color: var(--text-muted); }
+
+        .service-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .service-item {
+            display: flex;
+            gap: 16px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+        }
+
+        .service-item:hover {
+            border-color: var(--accent-soft);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .service-item h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .service-item p {
+            margin-top: 4px;
+            font-size: 13.5px;
+            color: var(--text-muted);
+        }
+
+        /* ------------------------------------------------------------- resume */
+        .timeline-head {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .timeline-head .h3 { margin-bottom: 0; }
+
+        .timeline-list {
+            margin-left: 20px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            padding-bottom: 26px;
+        }
+
+        .timeline-item:last-child { padding-bottom: 0; }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            bottom: -8px;
+            width: 1px;
+            background: var(--border);
+        }
+
+        .timeline-item:last-child::before { display: none; }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: -5px;
+            top: 6px;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid var(--accent);
+        }
+
+        .timeline-item h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .timeline-item .org {
+            display: block;
+            margin-top: 2px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .timeline-item .date {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 10px;
+            border-radius: 999px;
+            background: var(--accent-wash);
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .timeline-item ul {
+            margin-top: 12px;
+            padding-left: 18px;
+            list-style: disc;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 14px;
+        }
+
+        .timeline-item li::marker { color: var(--accent); }
+
+        /* Several roles under one company: each hangs off a short branch of
+           its own, with a smaller dot than the company's */
+        .roles {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        .role {
+            position: relative;
+            padding-left: 28px;
+        }
+
+        .role::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 11px;
+            width: 12px;
+            height: 1px;
+            background: var(--border-strong, #cbd5e1);
+        }
+
+        .role::after {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 8px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .role h5 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .role-date {
+            display: block;
+            margin-top: 2px;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .role ul { margin-top: 10px; }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .skill-group {
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+
+        .skill-group h4 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14.5px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .skill-group h4 svg.lucide { color: var(--accent); }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 14px;
+        }
+
+        .chip {
+            padding: 5px 11px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--panel-alt);
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-body);
+            transition: all 0.2s var(--ease);
+        }
+
+        .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* ---------------------------------------------------------- portfolio */
+        .filter-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 26px;
+        }
+
+        .filter-list button {
+            padding: 7px 15px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s var(--ease);
+        }
+
+        .filter-list button:hover { color: var(--accent); border-color: var(--accent-soft); }
+
+        .filter-list button.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .project-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .project {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--panel);
+            transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.2s var(--ease);
+        }
+
+        .project:hover {
+            border-color: var(--accent-soft);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .project-cover {
+            position: relative;
+            height: 196px;
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle, rgba(31, 78, 156, 0.12) 1.2px, transparent 1.6px) 0 0 / 16px 16px,
+                var(--panel-alt);
+            border-bottom: 1px solid var(--border-soft);
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        }
+
+        .project-cover .icon-box {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            box-shadow: 0 6px 14px -8px rgba(15, 23, 42, 0.25);
+            transition: transform 0.3s var(--ease);
+        }
+
+        .project-cover .icon-box svg.lucide { width: 26px; height: 26px; }
+
+        /* Screenshot covers: a small browser window angled back in 3D */
+        .project-cover.has-shot {
+            height: 196px;
+            place-items: end center;
+            padding: 40px 22px 0;
+            background:
+                radial-gradient(circle, rgba(31, 78, 156, 0.12) 1.2px, transparent 1.6px) 0 0 / 16px 16px,
+                linear-gradient(180deg, var(--accent-wash), var(--panel-alt));
+        }
+
+        .shot {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: 9px 9px 0 0;
+            background: #ffffff;
+            box-shadow: 0 -4px 24px -10px rgba(15, 23, 42, 0.3);
+            cursor: zoom-in;
+            transform-origin: 50% 100%;
+            /* translateZ keeps the leaning top in front of the cover surface */
+            transform: perspective(700px) translateZ(30px) rotateX(10deg);
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s var(--ease);
+        }
+
+        .shot-bar {
+            display: flex;
+            gap: 5px;
+            padding: 7px 9px;
+            background: #f1f5f9;
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .shot-bar i { width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1; }
+        .shot-bar i:nth-child(1) { background: #f87171; }
+        .shot-bar i:nth-child(2) { background: #fbbf24; }
+        .shot-bar i:nth-child(3) { background: #34d399; }
+
+        .shot img {
+            display: block;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            object-fit: cover;
+            object-position: top center;
+        }
+
+        .project:hover .shot { transform: perspective(700px) translateZ(30px) rotateX(0deg); }
+        .tilt.is-tilting .shot {
+            transform: perspective(700px) translateZ(46px) rotateX(0deg);
+            box-shadow: 0 -6px 34px -10px rgba(15, 23, 42, 0.4);
+        }
+
+        /* ---- Exploded 3D stack: several screenshots layered in depth ---- */
+        .stack {
+            position: relative;
+            display: block;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            cursor: zoom-in;
+            transform-style: preserve-3d;
+            transform-origin: 50% 100%;
+            transform: perspective(800px) translateZ(30px) rotateX(10deg);
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .stack-layer {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s var(--ease);
+        }
+
+        .stack-layer img {
+            display: block;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            object-fit: cover;
+            object-position: top left;
+        }
+
+        /* Back: the journey canvas, as a browser window */
+        .stack-layer.back {
+            left: 0;
+            right: 16%;
+            top: 0;
+            bottom: 0;
+            border-bottom: none;
+            border-radius: 9px 9px 0 0;
+            box-shadow: 0 -4px 24px -10px rgba(15, 23, 42, 0.3);
+            transform: translateZ(0);
+        }
+
+        /* A scan line sweeping the rows, like the tool reading a CSV */
+        .stack-layer.back::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 38%;
+            background: linear-gradient(180deg, transparent, rgba(59, 111, 216, 0.18) 85%, rgba(59, 111, 216, 0.7) 100%);
+            animation: scan 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0%   { transform: translateY(-100%); opacity: 0; }
+            15%  { opacity: 1; }
+            85%  { opacity: 1; }
+            100% { transform: translateY(270%); opacity: 0; }
+        }
+
+        /* Front: the extension panel floating over the canvas */
+        .stack-layer.front {
+            right: 0;
+            bottom: -6px;
+            width: 36%;
+            height: 112%;
+            border-radius: 10px;
+            box-shadow: -18px 22px 40px -18px rgba(15, 23, 42, 0.55);
+            transform: translateZ(26px) rotateY(-12deg);
+        }
+
+        .stack-layer.front img { object-position: top center; }
+
+        .stack-chip {
+            position: absolute;
+            left: 10px;
+            bottom: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            box-shadow: 0 10px 20px -8px rgba(31, 78, 156, 0.7);
+            transform: translateZ(44px);
+            transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+            animation: chipPulse 2.4s ease-in-out infinite;
+        }
+
+        .stack-chip svg.lucide { width: 13px; height: 13px; }
+
+        @keyframes chipPulse {
+            0%, 100% { box-shadow: 0 10px 20px -8px rgba(31, 78, 156, 0.7), 0 0 0 0 rgba(59, 111, 216, 0.45); }
+            50%      { box-shadow: 0 10px 20px -8px rgba(31, 78, 156, 0.7), 0 0 0 7px rgba(59, 111, 216, 0); }
+        }
+
+        /* Hover: flatten the stack and pull the layers apart in depth */
+        .project:hover .stack { transform: perspective(800px) translateZ(30px) rotateX(0deg); }
+        .project:hover .stack-layer.back  { transform: translateZ(-8px) translateX(-4px) rotateY(4deg); }
+        .project:hover .stack-layer.front {
+            transform: translateZ(46px) translateX(4px) rotateY(-18deg);
+            box-shadow: -26px 30px 46px -20px rgba(15, 23, 42, 0.55);
+        }
+        .project:hover .stack-chip { transform: translateZ(64px) translateY(-3px); }
+
+        @media (prefers-reduced-motion: reduce) {
+            .stack-layer.back::after, .stack-chip { animation: none; }
+            .stack-layer.back::after { display: none; }
+        }
+
+        /* ====================================================================
+           Illustrated 3D covers for projects without a public screenshot
+           ================================================================== */
+        .project-cover.has-scene { padding: 0; }
+        .project-badge { z-index: 3; }
+
+        .scene {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            border-radius: inherit;
+            perspective: 700px;
+        }
+
+        .scene * { transform-style: preserve-3d; }
+
+        /* ---- Disney Mania: three screens fanned out in 3D ---- */
+        .fan-wrap {
+            padding: 0;
+            cursor: zoom-in;
+            perspective: 800px;
+            background:
+                radial-gradient(ellipse at 50% 120%, rgba(56, 189, 248, 0.4) 0%, transparent 55%),
+                linear-gradient(180deg, #1a1f3a, #0b1022);
+        }
+
+        .fan-face {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            display: flex;
+            flex-direction: column;
+            width: 176px;
+            height: 104px;
+            margin: -60px 0 0 -88px;
+            overflow: hidden;
+            border-radius: 7px;
+            background: #0b1022;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 20px 30px -14px rgba(0, 0, 0, 0.85);
+            transform: translateX(calc(var(--k) * 92px)) translateZ(calc(var(--d) * -70px)) rotateY(calc(var(--k) * -34deg));
+            transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s var(--ease);
+            -webkit-box-reflect: below 5px linear-gradient(transparent 60%, rgba(255, 255, 255, 0.2));
+        }
+
+        .fan-face.center {
+            box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.5), 0 0 30px rgba(56, 189, 248, 0.45), 0 22px 32px -14px rgba(0, 0, 0, 0.9);
+        }
+
+        .project:hover .fan-face {
+            transform: translateX(calc(var(--k) * 112px)) translateZ(calc(var(--d) * -40px)) rotateY(calc(var(--k) * -20deg));
+        }
+
+        .fan-face .shot-bar { padding: 5px 7px; gap: 4px; background: #1e2440; border-bottom-color: rgba(255, 255, 255, 0.08); }
+        .fan-face .shot-bar i { width: 5px; height: 5px; }
+
+        .fan-face img {
+            display: block;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            object-fit: cover;
+            object-position: top center;
+        }
+
+        /* ---- Product shot: a main screen with two screens floating in front ---- */
+        .showcase {
+            padding: 0;
+            cursor: zoom-in;
+            perspective: 1000px;
+            background:
+                radial-gradient(ellipse at 85% 10%, var(--sc-glow), transparent 55%),
+                radial-gradient(circle, rgba(31, 41, 90, 0.08) 1.2px, transparent 1.6px) 0 0 / 16px 16px,
+                linear-gradient(150deg, var(--sc-a), var(--sc-b));
+        }
+
+        .sc-main,
+        .sc-float {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #ffffff;
+            transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s var(--ease);
+        }
+
+        .sc-main img,
+        .sc-float img {
+            display: block;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            object-fit: cover;
+        }
+
+        /* Main window rises from the bottom edge, turned slightly */
+        .sc-main {
+            left: 7%;
+            top: 42px;
+            width: 72%;
+            height: 172px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-radius: 9px 9px 0 0;
+            box-shadow: 0 24px 40px -18px rgba(30, 27, 75, 0.45);
+            transform-origin: 0 50%;
+            transform: rotateY(12deg) rotateX(3deg);
+        }
+
+        .sc-main img { object-position: top left; }
+
+        .sc-float {
+            border: 3px solid #ffffff;
+            border-radius: 9px;
+            box-shadow: 0 22px 34px -14px rgba(30, 27, 75, 0.55);
+            animation: scBob 6s ease-in-out infinite;
+        }
+
+        .sc-float img { object-position: center; }
+        /* Front screens are modal dialogs: zoom past the dimmed backdrop around them */
+        .sc-float.front img { transform: scale(1.4); }
+
+        .sc-float.front {
+            right: 5%;
+            bottom: 14px;
+            width: 44%;
+            height: 86px;
+            transform: translateZ(60px) rotateY(-8deg);
+        }
+
+        .sc-float.back {
+            right: 7%;
+            top: 18px;
+            width: 34%;
+            height: 62px;
+            transform: translateZ(30px) rotateY(-8deg);
+            animation-delay: -3s;
+        }
+
+        .project:hover .sc-main { transform: rotateY(4deg) rotateX(0deg); }
+        .project:hover .sc-float.front { transform: translate(-8px, -6px) translateZ(90px) rotateY(-4deg); }
+        .project:hover .sc-float.back  { transform: translate(6px, -4px) translateZ(56px) rotateY(-4deg); }
+
+        @keyframes scBob {
+            0%, 100% { translate: 0 0; }
+            50%      { translate: 0 -4px; }
+        }
+
+        /* ---- Moviepedia: a cinema, with the app playing on the big screen ---- */
+        .theater-wrap {
+            padding: 0;
+            cursor: zoom-in;
+            perspective: 700px;
+            background:
+                radial-gradient(ellipse at 50% 38%, rgba(120, 140, 255, 0.22), transparent 60%),
+                radial-gradient(ellipse at 50% 120%, rgba(239, 68, 68, 0.28), transparent 55%),
+                linear-gradient(180deg, #08080d, #120a12);
+        }
+
+        /* Projector light from the back of the room up to the screen */
+        .th-beam {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 30px;
+            bottom: 0;
+            background: linear-gradient(0deg, rgba(255, 240, 210, 0.35), rgba(200, 215, 255, 0.06) 75%);
+            clip-path: polygon(14% 0, 86% 0, 53% 100%, 47% 100%);
+            mix-blend-mode: screen;
+            animation: thFlicker 3.2s steps(1) infinite;
+            transition: opacity 0.4s var(--ease);
+        }
+
+        @keyframes thFlicker {
+            0%, 100% { opacity: 0.75; }
+            18%      { opacity: 0.6; }
+            22%      { opacity: 0.85; }
+            61%      { opacity: 0.68; }
+            64%      { opacity: 0.8; }
+        }
+
+        .th-screen {
+            position: absolute;
+            left: 13%;
+            right: 13%;
+            top: 30px;
+            height: 112px;
+            overflow: hidden;
+            border-radius: 3px;
+            background: #000000;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08), 0 0 46px rgba(180, 200, 255, 0.4), 0 30px 50px -20px rgba(0, 0, 0, 0.9);
+            transform-origin: 50% 100%;
+            transform: rotateX(7deg);
+            transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* The four screens cross-fade, each slowly zooming, like a trailer */
+        .th-slide {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 30%;
+            opacity: 0;
+            animation: thSlide 16s ease-in-out infinite;
+            animation-delay: calc(var(--i) * 4s - 16s);
+        }
+
+        @keyframes thSlide {
+            0%        { opacity: 0; transform: scale(1.02); }
+            5%, 25%   { opacity: 1; }
+            30%, 100% { opacity: 0; transform: scale(1.12); }
+        }
+
+        /* Rows of audience silhouettes */
+        .th-row {
+            position: absolute;
+            left: -10px;
+            right: -10px;
+            background:
+                radial-gradient(ellipse 10px 12px at 50% 55%, var(--c) 98%, transparent 100%) 0 0 / var(--gap) 100% repeat-x,
+                linear-gradient(var(--c), var(--c)) 0 100% / 100% 45% no-repeat;
+        }
+
+        .th-row.back  { bottom: 22px; height: 28px; --c: #17121d; --gap: 30px; background-position: 12px 0, 0 100%; }
+        .th-row.front { bottom: -4px; height: 36px; --c: #050407; --gap: 38px; }
+
+        .th-sign {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            z-index: 3;
+            padding: 4px 9px;
+            border: 1.5px dotted #fde68a;
+            border-radius: 6px;
+            background: #7f1d1d;
+            color: #fef3c7;
+            font-size: 9.5px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 0 14px rgba(251, 191, 36, 0.5);
+            animation: thBulbs 1.2s steps(2) infinite;
+        }
+
+        @keyframes thBulbs {
+            0%   { border-color: #fde68a; }
+            50%  { border-color: #f59e0b; }
+        }
+
+        .project:hover .th-screen { transform: rotateX(0deg) translateZ(40px); }
+        .project:hover .th-beam   { opacity: 1; }
+
+        /* Wide front layer for the exploded stack, for landscape screens */
+        .stack-layer.front.wide {
+            width: 52%;
+            height: 66%;
+            bottom: -4px;
+        }
+
+        .stack-layer.front.wide img { object-position: center; transform: scale(1.4); }
+
+        /* A placeholder that personalises itself */
+        .stack-chip .pz-swap { color: #ffffff; }
+
+        .pz-swap {
+            display: inline-block;
+            height: 16px;
+            overflow: hidden;
+            line-height: 16px;
+        }
+
+        .pz-swap b {
+            display: block;
+            font-family: ui-monospace, Menlo, monospace;
+            font-weight: 700;
+            animation: pzSwap 7.5s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+        }
+
+        @keyframes pzSwap {
+            0%, 22%   { transform: translateY(0); }
+            30%, 55%  { transform: translateY(-16px); }
+            63%, 88%  { transform: translateY(-32px); }
+            96%, 100% { transform: translateY(-48px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .pz-swap b, .th-slide, .th-beam, .th-sign { animation: none; }
+            .th-slide:first-child { opacity: 1; }
+        }
+
+        /* Small label so illustrated covers aren't mistaken for screenshots */
+        .illus-tag {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 3;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .illus-tag svg.lucide { width: 11px; height: 11px; }
+
+        /* ---- Photo covers: a real (stock) photo with the app's UI floating over it ---- */
+        .scene-photo { background: #0b0a10; }
+
+        /* The photo keeps its own 3:2 shape, so UI placed in % stays on the right spot */
+        .ph-stage {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            aspect-ratio: 3 / 2;
+            transform-origin: 50% 45%;
+            transform: translateY(-50%) scale(var(--zoom, 1.2));
+            transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .project:hover .ph-stage { transform: translateY(-50%) scale(calc(var(--zoom, 1.2) + 0.08)); }
+
+        .ph-stage > img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .ph-shade {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 40%, rgba(0, 0, 0, 0.55));
+        }
+
+        .ph-card {
+            position: absolute;
+            z-index: 2;
+            border-radius: 10px;
+            background: #ffffff;
+            box-shadow: 0 22px 36px -14px rgba(0, 0, 0, 0.7);
+            color: var(--text);
+            transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* Book Yo-Show: a seat picker projected on the cinema's blank screen */
+        .cine-stage { --zoom: 1.25; }
+
+        .cine-proj {
+            position: absolute;
+            left: 32.8%;
+            top: 32.6%;
+            width: 35.2%;
+            height: 23.4%;
+            display: flex;
+            flex-direction: column;
+            gap: 3%;
+            padding: 3% 4%;
+            background: linear-gradient(180deg, #141b2e, #0b1020);
+            box-shadow: 0 0 26px rgba(170, 195, 255, 0.45);
+            color: #ffffff;
+            font-size: 5px;
+            font-weight: 700;
+            animation: projFlicker 4s steps(1) infinite;
+        }
+
+        .cine-proj .bar { display: flex; justify-content: space-between; opacity: 0.85; }
+        .cine-proj .bar b { color: #fbbf24; }
+
+        .cine-proj .curve {
+            height: 6%;
+            margin: 0 12%;
+            border-top: 1px solid rgba(219, 230, 255, 0.8);
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        }
+
+        .cine-seats {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 8% 4%;
+        }
+
+        .cine-seats i { border-radius: 1px; background: #3b5aa0; }
+        .cine-seats i.b { background: #26324f; }
+        .cine-seats i.s { background: #fbbf24; box-shadow: 0 0 4px #fbbf24; }
+
+        @keyframes projFlicker {
+            0%, 100% { opacity: 0.95; }
+            40%      { opacity: 0.88; }
+            43%      { opacity: 0.97; }
+        }
+
+        .ph-ticket {
+            right: 12px;
+            bottom: 14px;
+            display: flex;
+            font-size: 9px;
+            line-height: 1.35;
+            color: var(--text-muted);
+            transform: translateZ(40px) rotate(-6deg);
+        }
+
+        .project:hover .ph-ticket { transform: translateZ(55px) translate(-10px, -8px) rotate(-2deg); }
+
+        .ph-ticket div { padding: 7px 10px; }
+        .ph-ticket b { display: block; font-size: 10.5px; color: var(--text); }
+        .ph-ticket div + div {
+            display: grid;
+            place-items: center;
+            border-left: 1.5px dashed var(--border);
+            color: #dc2626;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .ph-pill {
+            left: 12px;
+            bottom: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #dc2626;
+            color: #ffffff;
+            font-size: 10.5px;
+            font-weight: 700;
+            transform: translateZ(30px);
+            animation: pillPulse 2.4s ease-in-out infinite;
+        }
+
+        .ph-pill svg.lucide { width: 13px; height: 13px; }
+
+        @keyframes pillPulse {
+            0%, 100% { box-shadow: 0 12px 22px -10px rgba(0, 0, 0, 0.7), 0 0 0 0 rgba(220, 38, 38, 0.6); }
+            50%      { box-shadow: 0 12px 22px -10px rgba(0, 0, 0, 0.7), 0 0 0 7px rgba(220, 38, 38, 0); }
+        }
+
+        /* Bookaholics: a search bar and a book card over a real bookshelf */
+        .shelf-stage { --zoom: 1.15; }
+
+        .ph-search {
+            left: 50%;
+            top: 46px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            width: 62%;
+            padding: 7px 11px;
+            border-radius: 999px;
+            font-size: 10.5px;
+            color: var(--text-muted);
+            transform: translateX(-50%) translateZ(30px);
+        }
+
+        .ph-search svg.lucide { width: 13px; height: 13px; color: var(--accent); }
+        .ph-search b { margin-left: auto; color: var(--accent); font-size: 9.5px; }
+
+        .ph-book {
+            right: 14px;
+            bottom: 14px;
+            display: flex;
+            gap: 9px;
+            width: 58%;
+            padding: 8px;
+            transform: translateZ(50px) rotate(-2deg);
+        }
+
+        .project:hover .ph-book { transform: translateZ(65px) translate(-8px, -6px) rotate(0deg); }
+
+        .ph-book-cover {
+            flex: none;
+            width: 34px;
+            height: 50px;
+            border-radius: 3px;
+            background:
+                radial-gradient(circle at 60% 38%, #fde68a 0 16%, transparent 17%),
+                linear-gradient(170deg, #f97316, #7c2d12);
+            box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.35);
+        }
+
+        .ph-book-info { min-width: 0; font-size: 9px; color: var(--text-muted); }
+        .ph-book-info b { display: block; font-size: 11px; color: var(--text); white-space: nowrap; }
+        .ph-book-info .stars { color: #f59e0b; letter-spacing: -0.5px; }
+
+        .ph-add {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 2px 8px;
+            border-radius: 5px;
+            background: #7c3aed;
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: 700;
+            animation: addGlow 2.4s ease-in-out infinite;
+        }
+
+        @keyframes addGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55); }
+            50%      { box-shadow: 0 0 0 5px rgba(124, 58, 237, 0); }
+        }
+
+        .ph-toast {
+            left: 12px;
+            bottom: 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            font-size: 10px;
+            font-weight: 700;
+            animation: phToast 4.8s ease-in-out infinite;
+        }
+
+        .ph-toast svg.lucide { width: 13px; height: 13px; color: #16a34a; }
+
+        @keyframes phToast {
+            0%, 35%  { opacity: 0; transform: translateY(10px) translateZ(30px); }
+            45%, 85% { opacity: 1; transform: translateY(0) translateZ(30px); }
+            100%     { opacity: 0; transform: translateY(-6px) translateZ(30px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sc-float, .cine-proj, .ph-pill, .ph-add { animation: none; }
+            .ph-toast { animation: none; opacity: 1; transform: translateZ(30px); }
+        }
+
+        /* Full-size screenshot viewer */
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: rgba(15, 23, 42, 0.72);
+            -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s var(--ease), visibility 0.3s;
+            cursor: zoom-out;
+        }
+
+        .lightbox.open { opacity: 1; visibility: visible; }
+
+        .lightbox img {
+            max-width: min(1100px, 100%);
+            max-height: 88vh;
+            border-radius: 12px;
+            box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.6);
+            transform: perspective(1200px) rotateX(14deg) scale(0.9);
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .lightbox.open img { transform: none; }
+        .lightbox img.swap { animation: lbSwap 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+        @keyframes lbSwap {
+            from { opacity: 0; transform: perspective(1200px) rotateY(var(--swap-from, 25deg)) translateZ(-120px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            width: 46px;
+            height: 46px;
+            display: grid;
+            place-items: center;
+            margin-top: -23px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            transition: background 0.2s var(--ease);
+        }
+
+        .lightbox-nav:hover { background: rgba(255, 255, 255, 0.28); }
+        .lightbox-nav.prev { left: 18px; }
+        .lightbox-nav.next { right: 18px; }
+
+        .lightbox-count {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        .lightbox:not(.multi) .lightbox-nav,
+        .lightbox:not(.multi) .lightbox-count { display: none; }
+
+        .lightbox-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 40px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+        .project:not(.tilt):hover .project-cover .icon-box { transform: scale(1.08); }
+
+        .project-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 3px 9px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #ffffff;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .project-body {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 18px 20px 20px;
+        }
+
+        .project-body .cat {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-faint);
+        }
+
+        .project-body h4 {
+            margin-top: 2px;
+            font-size: 16.5px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .project-body p {
+            margin-top: 8px;
+            font-size: 13.5px;
+            color: var(--text-muted);
+        }
+
+        .project-body .ticks {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .project-body .ticks li {
+            display: flex;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-body);
+        }
+
+        .project-body .ticks svg.lucide { width: 15px; height: 15px; margin-top: 3px; color: var(--accent); }
+
+        .project-foot {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: auto;
+            padding-top: 16px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .tag {
+            padding: 2px 8px;
+            border-radius: 5px;
+            background: #f1f5f9;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .project-link svg.lucide { width: 14px; height: 14px; }
+        .project-link:hover { text-decoration: underline; }
+
+        .project-link.muted { color: var(--text-faint); }
+        .project-link.muted:hover { text-decoration: none; }
+
+        /* ------------------------------------------------------------ contact */
+        .contact-intro { max-width: 60ch; }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 26px;
+        }
+
+        .contact-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            min-width: 0;
+            transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+        }
+
+        .contact-card:hover {
+            border-color: var(--accent-soft);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .contact-card div { min-width: 0; }
+
+        .contact-card small {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .contact-card b {
+            display: block;
+            font-size: 14.5px;
+            font-weight: 600;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .contact-card .arrow { margin-left: auto; color: var(--text-faint); }
+
+        footer {
+            padding: 0 24px 40px;
+            text-align: center;
+            font-size: 12.5px;
+            color: var(--text-faint);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            article { animation: none; }
+            .avatar { animation: none; }
+        }
+
+        /* ------------------------------------------------------------- mobile */
+        @media (max-width: 1024px) {
+            main {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 16px 16px 24px;
+                gap: 16px;
+            }
+
+            /* backdrop-filter would trap the fixed bottom tab bar inside the
+               panel, so the main panel goes opaque here */
+            .main-content.card {
+                -webkit-backdrop-filter: none;
+                backdrop-filter: none;
+                background: var(--panel);
+            }
+
+            /* Clear the tab bar fixed to the bottom of the screen */
+            footer { padding-bottom: 96px; }
+
+            .sidebar {
+                position: static;
+                width: auto;
+                padding: 24px 20px;
+            }
+
+            /* Avatar beside the name, the contacts button on its own row */
+            .sidebar-info {
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr);
+                align-items: center;
+                gap: 16px;
+                text-align: left;
+            }
+
+            .avatar { width: 72px; height: 72px; border-radius: 20px; font-size: 26px; }
+            .sidebar h1 { margin-top: 0; font-size: 20px; line-height: 1.3; }
+            .title-pill { margin-top: 6px; }
+            .status { margin-top: 8px; }
+
+            .contacts-toggle {
+                display: flex;
+                grid-column: 1 / -1;
+                justify-content: center;
+                width: 100%;
+                margin-top: 0;
+            }
+            .sidebar-more { display: none; }
+            .sidebar.open .sidebar-more { display: block; }
+
+            /* The tabs become a bar fixed to the bottom of the screen */
+            .navbar {
+                position: fixed;
+                top: auto;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding: 0;
+                border: none;
+                border-top: 1px solid var(--border);
+                border-radius: 16px 16px 0 0;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                box-shadow: 0 -6px 20px -12px rgba(15, 23, 42, 0.25);
+                z-index: 20;
+            }
+
+            .navbar ul { justify-content: space-around; }
+            .navbar button { padding: 16px 8px; font-size: 13px; }
+            .navbar button.active::after { left: 8px; right: 8px; bottom: auto; top: -1px; }
+        }
+
+        @media (max-width: 720px) {
+            article { padding: 26px 20px 30px; }
+            .article-title { font-size: 24px; }
+            .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+            .stat { padding: 14px; }
+            .stat b { font-size: 19px; white-space: nowrap; }
+
+            /* Let a long email wrap instead of being cut off */
+            .contact-card b { white-space: normal; overflow-wrap: anywhere; }
+            .contact-card { padding: 16px; gap: 14px; }
+            .service-list,
+            .skills-grid,
+            .project-list,
+            .contact-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="scene3d" aria-hidden="true"></canvas>
+
+    <main>
+
+        <!-- SIDEBAR: profile card ------------------------------------------ -->
+        <aside class="sidebar card" id="sidebar">
+            <div class="sidebar-info">
+                <div class="avatar" aria-hidden="true"><span>SK</span></div>
+                <div>
+                    <h1>Shubham Kadam</h1>
+                    <span class="title-pill">Frontend Developer</span><br>
+                    <span class="status">Frontend · Automation · Solutions</span>
+                </div>
+                <button class="contacts-toggle" id="contactsToggle" aria-expanded="false" aria-controls="sidebarMore">
+                    Show Contacts <i data-lucide="chevron-down"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-more" id="sidebarMore">
+                <ul class="contacts-list">
+                    <li class="contact-item">
+                        <div class="icon-box"><i data-lucide="mail"></i></div>
+                        <div style="min-width: 0">
+                            <small>Email</small>
+                            <a href="mailto:shubhamkadam2801@gmail.com">shubhamkadam2801@gmail.com</a>
+                        </div>
+                    </li>
+                    <li class="contact-item">
+                        <div class="icon-box"><i data-lucide="phone"></i></div>
+                        <div>
+                            <small>Phone</small>
+                            <a href="tel:+918828789652">+91 88287 89652</a>
+                        </div>
+                    </li>
+                    <li class="contact-item">
+                        <div class="icon-box"><i data-lucide="map-pin"></i></div>
+                        <div>
+                            <small>Location</small>
+                            <span>Mumbai, Maharashtra, India</span>
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="social-list">
+                    <a href="https://www.linkedin.com/in/shubham-kadam-3a9043202/" target="_blank" rel="noopener" aria-label="LinkedIn"><i data-lucide="linkedin"></i></a>
+                    <a href="https://github.com/IShubh-10" target="_blank" rel="noopener" aria-label="GitHub"><i data-lucide="github"></i></a>
+                    <a href="https://x.com/Shubham99370073" target="_blank" rel="noopener" aria-label="X (Twitter)"><i data-lucide="twitter"></i></a>
+                    <a href="mailto:shubhamkadam2801@gmail.com" aria-label="Email"><i data-lucide="mail"></i></a>
+                </div>
+
+                <a class="cv-btn" href="Shubham_Kadam_Resume.pdf" download>
+                    <i data-lucide="download"></i> Download CV
+                </a>
+            </div>
+        </aside>
+
+        <!-- MAIN PANEL ----------------------------------------------------- -->
+        <div class="main-content card">
+
+            <nav class="navbar" aria-label="Sections">
+                <ul>
+                    <li><button class="active" data-nav="about">About</button></li>
+                    <li><button data-nav="resume">Experience</button></li>
+                    <li><button data-nav="portfolio">Portfolio</button></li>
+                    <li><button data-nav="contact">Contact</button></li>
+                </ul>
+            </nav>
+
+            <!-- ABOUT ------------------------------------------------------ -->
+            <article class="active" data-page="about">
+                <h2 class="article-title">About Me</h2>
+
+                <section class="about-text">
+                    <p>
+                        I'm a <strong>Frontend Developer</strong> from Mumbai with <strong>3+ years of experience</strong> (including a 1-year internship)
+                        building responsive web interfaces, internal tools and marketing automation solutions using React.js, JavaScript, Node.js and REST APIs.
+                    </p>
+                    <p>
+                        I design complex automated customer journeys and integrations across SMS, WhatsApp, Email, Web Push and
+                        Mobile Push. I've built internal tools that bulk-create <strong>1000+ campaigns from a single CSV upload</strong>, and
+                        that generate dynamic personalized images and email countdown timers on the fly.
+                    </p>
+                    <p>
+                        I work directly with clients and cross-functional teams to turn business requirements into
+                        production-ready solutions.
+                    </p>
+                </section>
+
+                <section>
+                    <div class="stats">
+                        <div class="stat"><b>3+</b><span>Years of experience</span></div>
+                        <div class="stat"><b>1000+</b><span>Campaigns from one CSV</span></div>
+                        <div class="stat"><b>5</b><span>Channels automated</span></div>
+                        <div class="stat"><b>Days → Min</b><span>Bulk launch turnaround</span></div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="h3">What I'm Doing</h3>
+                    <ul class="service-list">
+                        <li class="service-item">
+                            <div class="icon-box"><i data-lucide="code-2"></i></div>
+                            <div>
+                                <h4>Frontend Engineering</h4>
+                                <p>Responsive, cross-browser interfaces with React.js, JavaScript, HTML5 and CSS3, from internal tools to interactive content.</p>
+                            </div>
+                        </li>
+                        <li class="service-item">
+                            <div class="icon-box"><i data-lucide="workflow"></i></div>
+                            <div>
+                                <h4>Marketing Automation</h4>
+                                <p>Customer journeys with conditional branching, event triggers and REST API integrations across every channel.</p>
+                            </div>
+                        </li>
+                        <li class="service-item">
+                            <div class="icon-box"><i data-lucide="zap"></i></div>
+                            <div>
+                                <h4>Internal Tooling</h4>
+                                <p>Web tools and Chrome extensions with React.js, Node.js and REST APIs that automate repetitive campaign work, cutting execution from hours to minutes.</p>
+                            </div>
+                        </li>
+                        <li class="service-item">
+                            <div class="icon-box"><i data-lucide="users"></i></div>
+                            <div>
+                                <h4>Client Solutions</h4>
+                                <p>Owning delivery from requirement gathering to go-live, and prototyping use cases for client pitches.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </section>
+            </article>
+
+            <!-- RESUME ----------------------------------------------------- -->
+            <article data-page="resume">
+                <h2 class="article-title">Resume</h2>
+
+                <section>
+                    <div class="timeline-head">
+                        <div class="icon-box"><i data-lucide="briefcase"></i></div>
+                        <h3 class="h3">Experience</h3>
+                    </div>
+                    <ol class="timeline-list">
+                        <li class="timeline-item">
+                            <h4>WebEngage</h4>
+                            <span class="org">Mumbai, India</span>
+                            <span class="date">Oct 2024 — Present</span>
+
+                            <!-- Roles held at the same company, newest first -->
+                            <ol class="roles">
+                            <li class="role">
+                            <h5>Frontend Developer</h5>
+                            <span class="role-date">Sep 2025 — Present</span>
+                            <ul>
+                                <li>Build internal web tools and Chrome extensions with React.js, JavaScript, Node.js and REST APIs that automate repetitive campaign work, cutting execution time from hours to minutes (see Portfolio).</li>
+                                <li>Deliver end-to-end WebEngage implementations for enterprise clients, covering web implementations, on-site and email personalization, omnichannel campaigns and customer journey automation.</li>
+                                <li>Build complex customer journeys and automated workflows using event-based triggers, conditional branching, JavaScript and REST API integrations that connect client systems with WebEngage.</li>
+                                <li>Partner with Sales and Customer Success to identify business use cases, build prototypes and demonstrate platform capabilities through working technical solutions.</li>
+                                <li>Troubleshoot issues across frontend code, backend services and third-party integrations, improve existing implementations and provide technical guidance to team members.</li>
+                            </ul>
+                            </li>
+                            <li class="role">
+                            <h5>Junior Frontend Developer</h5>
+                            <span class="role-date">Oct 2024 — Sep 2025</span>
+                            <ul>
+                                <li>Developed responsive, cross-browser campaign assets, including surveys, in-app notifications, web and email personalization and interactive content, using HTML5, CSS3, JavaScript, jQuery and Nunjucks with REST API integrations.</li>
+                                <li>Implemented dynamic, personalized campaign experiences using user segmentation, targeting rules and catalog-driven content to support client engagement and conversion goals.</li>
+                                <li>Worked closely with Customer Success Managers and clients to translate business requirements into campaign strategies and technical implementations.</li>
+                                <li>Performed cross-browser and cross-device testing on BrowserStack to ensure consistent rendering, functionality and user experience across platforms.</li>
+                            </ul>
+                            </li>
+                            </ol>
+                        </li>
+                        <li class="timeline-item">
+                            <h4>Software Developer Intern</h4>
+                            <span class="org">NimbleWork, Inc. (formerly Digite) · Mumbai, India</span>
+                            <span class="date">Aug 2023 — Jul 2024</span>
+                            <ul>
+                                <li>Developed and maintained Nimble Production, a social sales and marketing CRM used by MNCs for contact organization, follow-up tasks, outreach tracking and multi-pipeline management.</li>
+                                <li>Upgraded source code, React components and micro frontends (JSP and React.js) to improve performance and long-term maintainability.</li>
+                                <li>Migrated Material UI from v4 to v5.15.6, adding new components and styles while updating Jest unit tests to maintain coverage and reliability.</li>
+                                <li>Automated document validation by building a web service against the W3C Markup Validation API, ensuring HTML compliance across the application.</li>
+                                <li>Upgraded CryptoJS to strengthen encryption and better protect user data.</li>
+                                <li>Resolved Jira defects consistently and took part in code reviews, proposing optimized solutions.</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </section>
+
+                <section>
+                    <div class="timeline-head">
+                        <div class="icon-box"><i data-lucide="graduation-cap"></i></div>
+                        <h3 class="h3">Education</h3>
+                    </div>
+                    <ol class="timeline-list">
+                        <li class="timeline-item">
+                            <h4>Java Full Stack Development</h4>
+                            <span class="org">Squad Infotech Pvt. Ltd., Mumbai</span>
+                            <span class="date">Nov 2021 — Jun 2023</span>
+                        </li>
+                        <li class="timeline-item">
+                            <h4>Bachelor of Commerce</h4>
+                            <span class="org">Tolani College of Commerce, Mumbai</span>
+                            <span class="date">Jun 2018 — May 2021</span>
+                        </li>
+                    </ol>
+                </section>
+
+                <section>
+                    <h3 class="h3">Technical Skills</h3>
+                    <div class="skills-grid">
+                        <div class="skill-group">
+                            <h4><i data-lucide="code-2"></i>Languages &amp; Databases</h4>
+                            <div class="chips">
+                                <span class="chip">HTML5</span><span class="chip">CSS3</span><span class="chip">JavaScript (ES6+)</span>
+                                <span class="chip">SQL</span><span class="chip">MySQL</span>
+                            </div>
+                        </div>
+                        <div class="skill-group">
+                            <h4><i data-lucide="layers"></i>Frameworks &amp; Libraries</h4>
+                            <div class="chips">
+                                <span class="chip">React.js</span><span class="chip">Redux</span><span class="chip">Node.js</span>
+                                <span class="chip">Express.js</span><span class="chip">jQuery</span><span class="chip">Material UI</span>
+                                <span class="chip">Bootstrap</span><span class="chip">Styled Components</span><span class="chip">Nunjucks</span>
+                                <span class="chip">Jest</span>
+                            </div>
+                        </div>
+                        <div class="skill-group">
+                            <h4><i data-lucide="plug"></i>Platforms &amp; APIs</h4>
+                            <div class="chips">
+                                <span class="chip">WebEngage</span><span class="chip">Journeys &amp; Relays</span><span class="chip">Web &amp; Email Personalization</span>
+                                <span class="chip">Segmentation</span><span class="chip">Catalogs</span><span class="chip">REST APIs</span>
+                                <span class="chip">Chrome Extension APIs</span><span class="chip">Firebase</span>
+                            </div>
+                        </div>
+                        <div class="skill-group">
+                            <h4><i data-lucide="wrench"></i>Tools</h4>
+                            <div class="chips">
+                                <span class="chip">Git</span><span class="chip">GitLab</span><span class="chip">Jira</span>
+                                <span class="chip">Asana</span><span class="chip">Postman</span><span class="chip">Figma</span>
+                                <span class="chip">Photopea</span><span class="chip">BrowserStack</span><span class="chip">VS Code</span>
+                                <span class="chip">Eclipse IDE</span><span class="chip">IntelliJ IDEA</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </article>
+
+            <!-- PORTFOLIO -------------------------------------------------- -->
+            <article data-page="portfolio">
+                <h2 class="article-title">Portfolio</h2>
+
+                <div class="filter-list" role="group" aria-label="Filter projects">
+                    <button class="active" data-filter="all">All</button>
+                    <button data-filter="Product">Products</button>
+                    <button data-filter="Automation">Automation</button>
+                    <button data-filter="Personal">Personal Projects</button>
+                </div>
+
+                <ul class="project-list" id="projectList">
+                    <!-- Populated via JS -->
+                </ul>
+            </article>
+
+            <!-- CONTACT ---------------------------------------------------- -->
+            <article data-page="contact">
+                <h2 class="article-title">Contact</h2>
+
+                <p class="contact-intro">
+                    Have an opportunity, a project to discuss, or just want to connect? The quickest way to reach me is email —
+                    or find me on any of the platforms below.
+                </p>
+
+                <div class="contact-grid">
+                    <a class="contact-card" href="mailto:shubhamkadam2801@gmail.com">
+                        <div class="icon-box"><i data-lucide="mail"></i></div>
+                        <div><small>Email</small><b>shubhamkadam2801@gmail.com</b></div>
+                        <i data-lucide="arrow-up-right" class="arrow"></i>
+                    </a>
+                    <a class="contact-card" href="tel:+918828789652">
+                        <div class="icon-box"><i data-lucide="phone"></i></div>
+                        <div><small>Phone</small><b>+91 88287 89652</b></div>
+                        <i data-lucide="arrow-up-right" class="arrow"></i>
+                    </a>
+                    <a class="contact-card" href="https://www.linkedin.com/in/shubham-kadam-3a9043202/" target="_blank" rel="noopener">
+                        <div class="icon-box"><i data-lucide="linkedin"></i></div>
+                        <div><small>LinkedIn</small><b>shubham-kadam</b></div>
+                        <i data-lucide="arrow-up-right" class="arrow"></i>
+                    </a>
+                    <a class="contact-card" href="https://github.com/IShubh-10" target="_blank" rel="noopener">
+                        <div class="icon-box"><i data-lucide="github"></i></div>
+                        <div><small>GitHub</small><b>IShubh-10</b></div>
+                        <i data-lucide="arrow-up-right" class="arrow"></i>
+                    </a>
+                </div>
+            </article>
+
+        </div>
+    </main>
+
+    <footer>© <span id="year">2026</span> Shubham Kadam · Mumbai, India</footer>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Project screenshot">
+        <button class="lightbox-close" aria-label="Close"><i data-lucide="x"></i></button>
+        <button class="lightbox-nav prev" aria-label="Previous screenshot"><i data-lucide="chevron-left"></i></button>
+        <img alt="">
+        <button class="lightbox-nav next" aria-label="Next screenshot"><i data-lucide="chevron-right"></i></button>
+        <span class="lightbox-count"></span>
+    </div>
+
+    <script>
+        // --- Projects ---------------------------------------------------------
+        const projects = [
+            {
+                category: 'Product',
+                icon: 'image',
+                badge: 'Revenue Generating',
+                title: 'ImageEngage',
+                description: 'A dynamic image personalization tool that generates personalized images on the fly from user attributes, enabling one-to-one visual personalization at scale in campaigns.',
+                highlights: [
+                    'Personalized email countdown timers rendered per recipient, for urgency-driven promotional and retention campaigns',
+                    'Simple configuration interface so non-technical team members generate assets without developer involvement'
+                ],
+                tags: ['JavaScript', 'Node.js', 'Express.js', 'MySQL', 'REST APIs'],
+                // Exploded 3D stack: back = sign-in page, front = personalised preview; the rest open in the viewer
+                images: ['images/projects/ie-login.jpg', 'images/projects/ie-preview.jpg', 'images/projects/ie-insights.jpg', 'images/projects/ie-library-v2.jpg'],
+                stackWide: true,
+                chipSwap: ['{{firstName}}', 'Shubham', 'Kadam', '{{firstName}}'],
+                url: 'https://webengage-studio.in.service.webengage.biz/tools'
+            },
+            {
+                category: 'Product',
+                icon: 'layout-grid',
+                badge: 'Sales & Growth',
+                title: 'Campaign Gallery Dashboard',
+                description: 'A centralized dashboard that stores and catalogs daily campaign work, giving the team a searchable library of delivered use cases.',
+                highlights: [
+                    'Used by Sales and Growth teams as a live reference to showcase platform capabilities to prospects and clients',
+                    'Real implementation examples reused internally instead of starting from scratch'
+                ],
+                tags: ['React.js', 'JavaScript', 'Node.js', 'Express.js', 'MySQL', 'REST APIs'],
+                showcase: ['images/projects/cg-gallery.jpg', 'images/projects/cg-preview.jpg', 'images/projects/cg-editor.jpg', 'images/projects/cg-login.jpg'],
+                theme: ['#f1edff', '#e3e9ff', 'rgba(124, 58, 237, 0.28)'],
+                url: 'https://campaign-gallery.in.service.webengage.biz/gallery'
+            },
+            {
+                category: 'Automation',
+                icon: 'zap',
+                badge: 'Days → Minutes',
+                title: 'Multi-Channel Campaign Automation',
+                description: 'A Chrome extension that creates 1000+ campaigns across SMS, WhatsApp, Email, Web Push and Mobile Push from a single CSV upload, replacing a fully manual, campaign-by-campaign setup.',
+                highlights: [
+                    'CSV parsing, field mapping, validation and error reporting, so failed rows are surfaced clearly instead of silently dropped',
+                    'Adopted across the delivery team — several days of manual work reduced to a single upload'
+                ],
+                tags: ['JavaScript', 'Chrome Extension APIs', 'REST APIs'],
+                // Several images render as an exploded 3D stack: first = back, second = front
+                images: ['images/projects/journey-uploader.jpg', 'images/projects/campaign-assistant.jpg'],
+                stackChip: 'CSV → 1000+ campaigns',
+                url: null
+            },
+            {
+                category: 'Personal',
+                icon: 'clapperboard',
+                badge: 'Web App',
+                title: 'Disney Mania',
+                description: 'A streaming-platform style web app with a browsable catalogue of movies and shows.',
+                tags: ['React.js', 'Firebase'],
+                // Three screens fanned in 3D, listed left → centre → right
+                fan: ['images/projects/disney-mania.jpg', 'images/projects/disney-home.jpg', 'images/projects/disney-row.jpg'],
+                url: 'https://disney-clone-62869.web.app/'
+            },
+            {
+                category: 'Personal',
+                icon: 'film',
+                badge: 'Web App',
+                title: 'Moviepedia',
+                description: 'A movie discovery web app for browsing titles and their details.',
+                tags: ['React.js', 'Firebase'],
+                // Screens playing on a cinema screen, cross-fading
+                theater: ['images/projects/mp-home.jpg', 'images/projects/mp-top.jpg', 'images/projects/mp-dark-knight.jpg', 'images/projects/mp-spiderman.jpg'],
+                url: 'https://moviepedia-a89f6.web.app/'
+            },
+            {
+                category: 'Personal',
+                icon: 'book-open',
+                badge: 'Application',
+                title: 'Bookaholics',
+                description: 'A book-focused application for browsing and managing a collection of books.',
+                tags: ['Java'],
+                scene: 'library',
+                url: 'https://github.com/IShubh-10/Bookaholics',
+                source: true
+            },
+            {
+                category: 'Personal',
+                icon: 'ticket',
+                badge: 'Application',
+                title: 'Book Yo-Show',
+                description: 'A movie ticket booking application for picking shows and reserving seats.',
+                tags: ['Java'],
+                scene: 'cinema',
+                url: 'https://github.com/IShubh-10/MovieTicketBooking',
+                source: true
+            }
+        ];
+
+        const categoryLabel = { Product: 'Product', Automation: 'Automation', Personal: 'Personal Project' };
+
+        // Illustrated 3D covers, built from markup rather than screenshots
+        const scenes = {
+            cinema() {
+                // Seat map projected on the photo's blank screen: b = booked, s = your seats
+                const booked = new Set([1, 2, 9, 14, 15, 20, 26, 27, 33, 38, 39, 44]);
+                const picked = new Set([29, 30]);
+                const seats = Array.from({ length: 48 }, (_, i) =>
+                    `<i class="${picked.has(i) ? 's' : booked.has(i) ? 'b' : ''}"></i>`).join('');
+                return `<div class="scene scene-photo" aria-hidden="true">
+                    <div class="ph-stage cine-stage">
+                        <img src="images/projects/stock-cinema.jpg" alt="" loading="lazy">
+                        <div class="cine-proj"><span class="bar"><span>BOOK YO-SHOW · SCREEN 2</span><b>7:30 PM</b></span><span class="curve"></span><span class="cine-seats">${seats}</span></div>
+                    </div>
+                    <span class="ph-shade"></span>
+                    <span class="ph-card ph-pill"><i data-lucide="armchair"></i>2 seats selected</span>
+                    <span class="ph-card ph-ticket"><div><b>Book Yo-Show</b>Row C · Seats 6–7<br>Screen 2 · 7:30 PM</div><div>2×</div></span>
+                </div>`;
+            },
+            library() {
+                return `<div class="scene scene-photo" aria-hidden="true">
+                    <div class="ph-stage shelf-stage"><img src="images/projects/stock-bookshelf.jpg" alt="" loading="lazy"></div>
+                    <span class="ph-shade"></span>
+                    <span class="ph-card ph-search"><i data-lucide="search"></i>Search titles, authors…<b>1,240 books</b></span>
+                    <span class="ph-card ph-toast"><i data-lucide="circle-check"></i>Added to your shelf</span>
+                    <span class="ph-card ph-book"><span class="ph-book-cover"></span><span class="ph-book-info"><b>Tides of Ember</b>Fiction · 342 pages<br><span class="stars">★★★★★</span><br><span class="ph-add">+ Add to shelf</span></span></span>
+                </div>`;
+            }
+        };
+
+        function renderProjects(filter) {
+            const list = document.getElementById('projectList');
+            list.innerHTML = projects
+                .filter(p => filter === 'all' || p.category === filter)
+                .map(p => {
+                    const link = p.url
+                        ? `<a class="project-link" href="${p.url}" target="_blank" rel="noopener">${p.source ? 'Source code' : 'Live'} <i data-lucide="${p.source ? 'github' : 'arrow-up-right'}"></i></a>`
+                        : `<span class="project-link muted"><i data-lucide="lock"></i> Internal tool</span>`;
+                    const ticks = p.highlights
+                        ? `<ul class="ticks">${p.highlights.map(h => `<li><i data-lucide="check"></i><span>${h}</span></li>`).join('')}</ul>`
+                        : '';
+                    // Add `image: 'images/projects/<file>.jpg'` to a project to show its screenshot
+                    // The lightbox opens on the centre screen, then the sides
+                    const fanOrder = p.fan ? [p.fan[1], p.fan[0], p.fan[2]] : null;
+                    const cover = p.theater
+                        ? `<div class="project-cover has-scene">
+                                <span class="project-badge">${p.badge}</span>
+                                <button class="scene theater-wrap" data-shot="${p.theater.join('|')}" data-alt="${p.title} screenshot" aria-label="View ${p.title} screenshots">
+                                    <span class="th-beam"></span>
+                                    <span class="th-screen">${p.theater.map((src, i) =>
+                                        `<img class="th-slide" style="--i:${i}" src="${src}" alt="" loading="lazy">`).join('')}</span>
+                                    <span class="th-row back"></span>
+                                    <span class="th-row front"></span>
+                                    <span class="th-sign">Now showing</span>
+                                </button>
+                            </div>`
+                        : p.showcase
+                        ? `<div class="project-cover has-scene">
+                                <span class="project-badge">${p.badge}</span>
+                                <button class="scene showcase" style="--sc-a:${p.theme[0]};--sc-b:${p.theme[1]};--sc-glow:${p.theme[2]}" data-shot="${p.showcase.join('|')}" data-alt="${p.title} screenshot" aria-label="View ${p.title} screenshots">
+                                    <span class="sc-main"><span class="shot-bar"><i></i><i></i><i></i></span><img src="${p.showcase[0]}" alt="" loading="lazy"></span>
+                                    <span class="sc-float back"><img src="${p.showcase[2]}" alt="" loading="lazy"></span>
+                                    <span class="sc-float front"><img src="${p.showcase[1]}" alt="" loading="lazy"></span>
+                                </button>
+                            </div>`
+                        : p.fan
+                        ? `<div class="project-cover has-scene">
+                                <span class="project-badge">${p.badge}</span>
+                                <button class="scene fan-wrap" data-shot="${fanOrder.join('|')}" data-alt="${p.title} screenshot" aria-label="View ${p.title} screenshots">
+                                    ${p.fan.map((src, i) => {
+                                        const k = i - 1;
+                                        return `<span class="fan-face${k === 0 ? ' center' : ''}" style="--k:${k};--d:${k === 0 ? -0.4 : 1}"><span class="shot-bar"><i></i><i></i><i></i></span><img src="${src}" alt="" loading="lazy"></span>`;
+                                    }).join('')}
+                                </button>
+                            </div>`
+                        : p.scene
+                        ? `<div class="project-cover has-scene">
+                                <span class="project-badge">${p.badge}</span>
+                                <span class="illus-tag" title="Stock photo from Pexels with a mock-up of the app, not a product screenshot"><i data-lucide="camera"></i>Photo</span>
+                                ${scenes[p.scene]()}
+                            </div>`
+                        : p.images
+                        ? `<div class="project-cover has-shot">
+                                <span class="project-badge">${p.badge}</span>
+                                <button class="stack" data-shot="${p.images.join('|')}" data-alt="${p.title} screenshot" aria-label="View ${p.title} screenshots">
+                                    <span class="stack-layer back">
+                                        <span class="shot-bar"><i></i><i></i><i></i></span>
+                                        <img src="${p.images[0]}" alt="" loading="lazy">
+                                    </span>
+                                    <span class="stack-layer front${p.stackWide ? ' wide' : ''}"><img src="${p.images[1]}" alt="" loading="lazy"></span>
+                                    ${p.chipSwap
+                                        ? `<span class="stack-chip"><i data-lucide="sparkles"></i>Hi, <span class="pz-swap">${p.chipSwap.map(n => `<b>${n}</b>`).join('')}</span></span>`
+                                        : p.stackChip ? `<span class="stack-chip"><i data-lucide="file-spreadsheet"></i>${p.stackChip}</span>` : ''}
+                                </button>
+                            </div>`
+                        : p.image
+                        ? `<div class="project-cover has-shot">
+                                <span class="project-badge">${p.badge}</span>
+                                <button class="shot" data-shot="${p.image}" data-alt="${p.title} screenshot" aria-label="View ${p.title} screenshot">
+                                    <span class="shot-bar"><i></i><i></i><i></i></span>
+                                    <img src="${p.image}" alt="${p.title} screenshot" loading="lazy">
+                                </button>
+                            </div>`
+                        : `<div class="project-cover">
+                                <span class="project-badge">${p.badge}</span>
+                                <div class="icon-box"><i data-lucide="${p.icon}"></i></div>
+                            </div>`;
+                    return `
+                        <li class="project">
+                            ${cover}
+                            <div class="project-body">
+                                <span class="cat">${categoryLabel[p.category]}</span>
+                                <h4>${p.title}</h4>
+                                <p>${p.description}</p>
+                                ${ticks}
+                                <div class="project-foot">
+                                    <div class="tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+                                    ${link}
+                                </div>
+                            </div>
+                        </li>`;
+                })
+                .join('');
+            lucide.createIcons();
+            markTilt();
+        }
+
+        // --- Screenshot lightbox ------------------------------------------------
+        // data-shot holds one image path, or several joined by "|"
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = lightbox.querySelector('img');
+        const lightboxCount = lightbox.querySelector('.lightbox-count');
+        let gallery = [], galleryIndex = 0;
+
+        function showShot(i, dir) {
+            galleryIndex = (i + gallery.length) % gallery.length;
+            lightboxImg.src = gallery[galleryIndex];
+            lightboxCount.textContent = `${galleryIndex + 1} / ${gallery.length}`;
+            if (dir) {
+                lightboxImg.style.setProperty('--swap-from', dir > 0 ? '25deg' : '-25deg');
+                lightboxImg.classList.remove('swap');
+                void lightboxImg.offsetWidth; // restart the animation
+                lightboxImg.classList.add('swap');
+            }
+        }
+
+        const closeLightbox = () => lightbox.classList.remove('open');
+        document.getElementById('projectList').addEventListener('click', e => {
+            const shot = e.target.closest('[data-shot]');
+            if (!shot) return;
+            gallery = shot.dataset.shot.split('|');
+            lightboxImg.alt = shot.dataset.alt;
+            lightbox.classList.toggle('multi', gallery.length > 1);
+            showShot(0);
+            lightbox.classList.add('open');
+        });
+        lightbox.addEventListener('click', e => {
+            const nav = e.target.closest('.lightbox-nav');
+            if (nav) { showShot(galleryIndex + (nav.classList.contains('next') ? 1 : -1), nav.classList.contains('next') ? 1 : -1); return; }
+            if (e.target === lightboxImg && gallery.length > 1) { showShot(galleryIndex + 1, 1); return; }
+            closeLightbox();
+        });
+        document.addEventListener('keydown', e => {
+            if (!lightbox.classList.contains('open')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (gallery.length > 1 && e.key === 'ArrowRight') showShot(galleryIndex + 1, 1);
+            if (gallery.length > 1 && e.key === 'ArrowLeft') showShot(galleryIndex - 1, -1);
+        });
+
+        // --- 3D tilt cards (mouse / trackpad only) -----------------------------
+        const TILT_SEL = '.project, .service-item, .stat, .contact-card, .skill-group, .sidebar';
+        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const tiltEnabled = matchMedia('(hover: hover) and (pointer: fine)').matches && !reduceMotion;
+
+        function markTilt() {
+            if (!tiltEnabled) return;
+            document.querySelectorAll(TILT_SEL).forEach(el => el.classList.add('tilt'));
+        }
+
+        if (tiltEnabled) {
+            let current = null;
+            const reset = el => {
+                if (!el) return;
+                el.classList.remove('is-tilting');
+                el.style.removeProperty('--rx');
+                el.style.removeProperty('--ry');
+            };
+            document.addEventListener('pointermove', e => {
+                const el = e.target.closest('.tilt');
+                if (el !== current) { reset(current); current = el; }
+                if (!el) return;
+                const r = el.getBoundingClientRect();
+                const px = (e.clientX - r.left) / r.width;
+                const py = (e.clientY - r.top) / r.height;
+                const max = el.classList.contains('sidebar') ? 4 : 10;
+                el.style.setProperty('--ry', ((px - 0.5) * 2 * max).toFixed(2) + 'deg');
+                el.style.setProperty('--rx', (-(py - 0.5) * 2 * max).toFixed(2) + 'deg');
+                el.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+                el.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+                el.classList.add('is-tilting');
+            });
+            document.documentElement.addEventListener('pointerleave', () => { reset(current); current = null; });
+        }
+
+        // --- 3D background scene (Three.js) -------------------------------------
+        (function initScene() {
+            const canvas = document.getElementById('scene3d');
+            if (!window.THREE || !canvas) { canvas && canvas.remove(); return; }
+
+            let renderer;
+            try {
+                renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            } catch (err) {
+                canvas.remove();
+                return;
+            }
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+            camera.position.z = 12;
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+            const key = new THREE.DirectionalLight(0xffffff, 0.9);
+            key.position.set(6, 8, 10);
+            scene.add(key);
+            const rim = new THREE.PointLight(0x3b6fd8, 1.4, 40);
+            rim.position.set(-8, -5, 6);
+            scene.add(rim);
+
+            const palette = [0x1f4e9c, 0x3b6fd8, 0x7aa2f0, 0xb9cdf8];
+            // [geometry, x (share of half width), y (share of half height), z, scale, cage]
+            const layout = [
+                [new THREE.IcosahedronGeometry(1.4, 0),           -0.80,  0.55, -2, 1.1, true],
+                [new THREE.TorusKnotGeometry(0.9, 0.28, 120, 14),  0.82,  0.58, -3, 1.2, false],
+                [new THREE.OctahedronGeometry(1.2, 0),            -0.86, -0.55, -1, 0.9, true],
+                [new THREE.TorusGeometry(1.1, 0.36, 18, 60),       0.80, -0.52, -2, 1.0, false],
+                [new THREE.DodecahedronGeometry(1.1, 0),           0.05,  0.95, -6, 0.9, true],
+                [new THREE.BoxGeometry(1.4, 1.4, 1.4),            -0.25, -0.98, -5, 1.0, true]
+            ];
+
+            const shapes = layout.map(([geo, fx, fy, z, s, cage], i) => {
+                const group = new THREE.Group();
+                group.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
+                    color: palette[i % palette.length], flatShading: true, shininess: 70,
+                    transparent: true, opacity: 0.92
+                })));
+                if (cage) {
+                    const wire = new THREE.LineSegments(
+                        new THREE.EdgesGeometry(geo),
+                        new THREE.LineBasicMaterial({ color: 0x1f4e9c, transparent: true, opacity: 0.35 })
+                    );
+                    wire.scale.setScalar(1.22);
+                    group.add(wire);
+                }
+                group.scale.setScalar(s);
+                group.userData = {
+                    fx, fy, z, phase: i * 1.7,
+                    spin: new THREE.Vector3(0.15 + Math.random() * 0.25, 0.2 + Math.random() * 0.3, 0.05 + Math.random() * 0.1)
+                };
+                scene.add(group);
+                return group;
+            });
+
+            // Drifting particle field
+            const count = innerWidth < 720 ? 260 : 600;
+            const pos = new Float32Array(count * 3);
+            for (let i = 0; i < count; i++) {
+                pos[i * 3]     = (Math.random() - 0.5) * 40;
+                pos[i * 3 + 1] = (Math.random() - 0.5) * 26;
+                pos[i * 3 + 2] = (Math.random() - 0.5) * 20 - 4;
+            }
+            const pGeo = new THREE.BufferGeometry();
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({
+                color: 0x3b6fd8, size: 0.06, transparent: true, opacity: 0.55, sizeAttenuation: true
+            }));
+            scene.add(particles);
+
+            // Perspective grid floor
+            const grid = new THREE.GridHelper(80, 60, 0x7aa2f0, 0xb9cdf8);
+            grid.material.transparent = true;
+            grid.material.opacity = 0.35;
+            grid.position.y = -7;
+            scene.add(grid);
+
+            function layoutShapes() {
+                const halfH0 = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+                shapes.forEach(g => {
+                    const { fx, fy, z } = g.userData;
+                    const halfH = halfH0 * (camera.position.z - z);
+                    g.userData.baseX = fx * halfH * camera.aspect;
+                    g.userData.baseY = fy * halfH;
+                    g.position.set(g.userData.baseX, g.userData.baseY, z);
+                });
+            }
+
+            function resize() {
+                const w = innerWidth, h = innerHeight;
+                renderer.setSize(w, h, false);
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                layoutShapes();
+                if (reduceMotion) renderer.render(scene, camera);
+            }
+            addEventListener('resize', resize);
+            resize();
+
+            if (reduceMotion) return;
+
+            const mouse = { x: 0, y: 0 };
+            addEventListener('pointermove', e => {
+                mouse.x = (e.clientX / innerWidth) * 2 - 1;
+                mouse.y = (e.clientY / innerHeight) * 2 - 1;
+            });
+
+            const clock = new THREE.Clock();
+            let running = true;
+            function tick() {
+                if (!running) return;
+                const dt = Math.min(clock.getDelta(), 0.05);
+                const t = clock.elapsedTime;
+
+                shapes.forEach(g => {
+                    const u = g.userData;
+                    g.rotation.x += u.spin.x * dt;
+                    g.rotation.y += u.spin.y * dt;
+                    g.rotation.z += u.spin.z * dt;
+                    g.position.y = u.baseY + Math.sin(t * 0.8 + u.phase) * 0.35;
+                });
+                particles.rotation.y = t * 0.02;
+                grid.position.z = (t * 0.6) % (80 / 60);
+
+                // Camera parallax with the cursor, and a gentle orbit on scroll
+                const scroll = scrollY / Math.max(document.body.scrollHeight - innerHeight, 1);
+                camera.position.x += (mouse.x * 1.6 - camera.position.x) * 0.04;
+                camera.position.y += (-mouse.y * 1.0 + scroll * -2 - camera.position.y) * 0.04;
+                camera.lookAt(0, scroll * -2, 0);
+
+                renderer.render(scene, camera);
+                requestAnimationFrame(tick);
+            }
+            document.addEventListener('visibilitychange', () => {
+                running = !document.hidden;
+                if (running) { clock.getDelta(); requestAnimationFrame(tick); }
+            });
+            requestAnimationFrame(tick);
+        })();
+
+        document.querySelectorAll('[data-filter]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b === btn));
+                renderProjects(btn.dataset.filter);
+            });
+        });
+
+        // --- Tabs: one article shown at a time, kept in the URL hash ----------
+        const navButtons = document.querySelectorAll('[data-nav]');
+        const pages = document.querySelectorAll('[data-page]');
+
+        function showPage(name) {
+            if (![...pages].some(p => p.dataset.page === name)) name = 'about';
+            navButtons.forEach(b => b.classList.toggle('active', b.dataset.nav === name));
+            pages.forEach(p => p.classList.toggle('active', p.dataset.page === name));
+        }
+
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                showPage(btn.dataset.nav);
+                history.replaceState(null, '', '#' + btn.dataset.nav);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+
+        // --- Sidebar contacts collapse on small screens -----------------------
+        const sidebar = document.getElementById('sidebar');
+        const contactsToggle = document.getElementById('contactsToggle');
+        contactsToggle.addEventListener('click', () => {
+            const open = sidebar.classList.toggle('open');
+            contactsToggle.setAttribute('aria-expanded', String(open));
+            contactsToggle.firstChild.textContent = open ? 'Hide Contacts ' : 'Show Contacts ';
+        });
+
+        document.getElementById('year').textContent = new Date().getFullYear();
+        showPage(location.hash.slice(1));
+        renderProjects('all');
+    </script>
+</body>
+</html>
