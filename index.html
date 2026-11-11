@@ -1783,6 +1783,17 @@
             .skills-grid,
             .project-list,
             .contact-grid { grid-template-columns: 1fr; }
+
+            /* Timeline: shrink each level of indentation so bullets get
+               the screen width instead of a narrow column */
+            article { padding-left: 16px; padding-right: 16px; }
+            .timeline-list { margin-left: 6px; }
+            .timeline-item { padding-left: 20px; }
+            .roles { gap: 16px; margin-top: 14px; }
+            .role { padding-left: 14px; }
+            .role::before { width: 6px; }
+            .role::after { left: 4px; width: 6px; height: 6px; }
+            .timeline-item ul { padding-left: 14px; font-size: 13.5px; }
         }
     </style>
 </head>
